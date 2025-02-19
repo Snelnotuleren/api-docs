@@ -1,0 +1,146 @@
+openapi: 3.0.0
+info:
+  title: Snelnotuleren API
+  version: '1.0.0'
+  description: |
+    De Snelnotuleren API stelt je in staat om audio opnames automatisch om te zetten naar notulen.
+    
+    ## Authenticatie
+    De API gebruikt client credentials voor authenticatie. Je kunt je credentials verkrijgen via het dashboard.
+    
+    ## Prijzen
+    - Transcriptie: €5
+    - Korte notulen: €10
+    - Middellange notulen: €20
+    - Lange notulen: €25
+
+servers:
+  - url: https://api.snelnotuleren.nl/api/v1
+    description: Productie API
+
+paths:
+  /auth/token:
+    post:
+      summary: Verkrijg een access token
+      description: Genereer een access token met je client credentials
+      operationId: getToken
+      tags:
+        - Authenticatie
+      parameters:
+        - in: header
+          name: X-Client-ID
+          required: true
+          schema:
+            type: string
+          description: Je client ID
+        - in: header
+          name: X-Client-Secret
+          required: true
+          schema:
+            type: string
+          description: Je client secret
+      responses:
+        '200':
+          description: Token succesvol gegenereerd
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  access_token:
+                    type: string
+                    description: JWT token voor API requests
+                  expires_in:
+                    type: integer
+                    description: Vervaltijd in seconden
+                  token_type:
+                    type: string
+                    description: Token type (altijd "Bearer")
+
+  /create-order:
+    post:
+      summary: Maak een nieuwe order aan
+      description: Creëer een nieuwe order voor het verwerken van een audio bestand
+      operationId: createOrder
+      tags:
+        - Orders
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - fileName
+                - email
+                - modelType
+                - reportType
+                - context
+              properties:
+                fileName:
+                  type: string
+                  description: Naam van het audio bestand
+                  example: "vergadering.mp3"
+                email:
+                  type: string
+                  format: email
+                  description: Email voor notificaties
+                  example: "contact@bedrijf.nl"
+                modelType:
+                  type: string
+                  enum: [standard]
+                  description: Type transcriptie model
+                reportType:
+                  type: string
+                  enum: [transcriptie, korte_notulen, middel_notulen, lange_notulen]
+                  description: Type rapport
+                context:
+                  type: string
+                  description: Naam/context van de vergadering
+                  example: "Bestuursvergadering Q1"
+                smart_detection:
+                  type: boolean
+                  description: Automatische agendapunt detectie
+                  default: false
+                speaker_diarization:
+                  type: boolean
+                  description: Sprekerherkenning gebruiken
+                  default: false
+                speaker_count:
+                  type: integer
+                  description: Verwacht aantal sprekers
+                  minimum: 1
+                  maximum: 10
+      responses:
+        '200':
+          description: Order succesvol aangemaakt
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  orderId:
+                    type: string
+                    description: Unieke order ID
+                  uploadUrl:
+                    type: string
+                    description: Signed URL voor bestand upload
+                  status:
+                    type: string
+                    enum: [success]
+                  paymentRequired:
+                    type: boolean
+                    description: Of betaling nodig is
+                  paymentUrl:
+                    type: string
+                    description: URL voor betaling (indien nodig)
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token verkregen via /auth/token endpoint
