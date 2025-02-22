@@ -8,6 +8,10 @@ info:
     ## Authenticatie
     De API gebruikt client credentials voor authenticatie. Je kunt je credentials verkrijgen via het dashboard.
     
+    ## Webhooks
+    Je kunt webhooks gebruiken om direct een notificatie te krijgen wanneer je notulen klaar zijn. 
+    Geef een webhook_url mee bij het aanmaken van een order om updates te ontvangen.
+    
     ## Prijzen
     - Transcriptie: €5
     - Korte notulen: €10
@@ -100,6 +104,11 @@ paths:
                   type: string
                   description: Naam/context van de vergadering
                   example: "Bestuursvergadering Q1"
+                webhook_url:
+                  type: string
+                  format: uri
+                  description: URL waar webhook notificaties naartoe gestuurd worden
+                  example: "https://jouw-domein.nl/webhook"
                 smart_detection:
                   type: boolean
                   description: Automatische agendapunt detectie
@@ -114,8 +123,8 @@ paths:
                   minimum: 1
                   maximum: 10
       responses:
-        '200':
-          description: Order succesvol aangemaakt
+        '202':
+          description: Order accepted for processing
           content:
             application/json:
               schema:
@@ -129,15 +138,83 @@ paths:
                     description: Signed URL voor bestand upload
                   status:
                     type: string
-                    enum: [success]
-                  paymentRequired:
-                    type: boolean
-                    description: Of betaling nodig is
-                  paymentUrl:
+                    enum: [processing]
+                  estimatedProcessingTime:
                     type: string
-                    description: URL voor betaling (indien nodig)
+                    description: Geschatte verwerkingstijd
+                    example: "30 minutes"
+                  _links:
+                    type: object
+                    properties:
+                      self:
+                        type: string
+                        description: URL naar order details
+                      status:
+                        type: string
+                        description: URL voor status updates
+                  webhook:
+                    type: object
+                    description: Webhook configuratie (indien webhook_url is opgegeven)
+                    properties:
+                      url:
+                        type: string
+                        description: De webhook URL
+                      events:
+                        type: array
+                        items:
+                          type: string
+                          enum: [processing.completed, processing.failed]
+                        description: Events die naar deze webhook gestuurd worden
 
 components:
+  schemas:
+    WebhookEvent:
+      type: object
+      description: Payload die naar de webhook gestuurd wordt
+      properties:
+        event:
+          type: string
+          enum: [processing.completed, processing.failed]
+          description: Type event
+        order_id:
+          type: string
+          description: ID van de order
+        status:
+          type: string
+          enum: [completed, failed]
+          description: Status van de order
+        data:
+          type: object
+          description: Data (alleen bij completed event)
+          properties:
+            meeting_name:
+              type: string
+            meeting_date:
+              type: string
+              format: date
+            notulen:
+              type: string
+            speakers:
+              type: array
+              items:
+                type: string
+            metadata:
+              type: object
+              properties:
+                speaker_diarization:
+                  type: boolean
+                speakers_expected:
+                  type: integer
+                detected_language:
+                  type: string
+                categories:
+                  type: array
+                  items:
+                    type: string
+        error:
+          type: string
+          description: Error bericht (alleen bij failed event)
+
   securitySchemes:
     BearerAuth:
       type: http
