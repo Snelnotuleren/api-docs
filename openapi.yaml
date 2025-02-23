@@ -1,7 +1,7 @@
 openapi: 3.0.0
 info:
   title: Snelnotuleren API
-  version: '1.1.7'
+  version: '1.1.8'
   description: |
     De Snelnotuleren API stelt je in staat om audio opnames automatisch om te zetten naar notulen.
     
@@ -92,8 +92,20 @@ paths:
                 - context
                 - meeting_date
                 - smart_detection
-              properties:
+              anyOf:
+                - properties:
+                    smart_detection:
+                      type: boolean
+                      enum: [true]
+                - properties:
+                    smart_detection:
+                      type: boolean
+                      enum: [false]
+                    unstructured_agenda:
+                      type: string
+                      minLength: 1
                 # Verplichte velden
+              properties:
                 fileName:
                   type: string
                   description: Naam van het audio bestand
@@ -118,8 +130,14 @@ paths:
                   example: "2025-02-23"
                 smart_detection:
                   type: boolean
-                  description: Automatische agendapunt detectie
-                  example: true
+                  description: |
+                    Automatische agendapunt detectie.
+                    Als dit false is, moet unstructured_agenda worden meegegeven.
+                unstructured_agenda:
+                  type: string
+                  description: |
+                    Ongestructureerde agenda tekst.
+                    Verplicht als smart_detection false is.
 
                 # Optionele velden
                 webhook_url:
