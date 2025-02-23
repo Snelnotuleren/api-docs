@@ -1,7 +1,7 @@
 openapi: 3.0.0
 info:
   title: Snelnotuleren API
-  version: '1.0.0'
+  version: '1.1.7'
   description: |
     De Snelnotuleren API stelt je in staat om audio opnames automatisch om te zetten naar notulen.
     
@@ -11,6 +11,12 @@ info:
     ## Webhooks
     Je kunt webhooks gebruiken om direct een notificatie te krijgen wanneer je notulen klaar zijn. 
     Geef een webhook_url mee bij het aanmaken van een order om updates te ontvangen.
+    
+    ## Experimentele Features
+    De volgende features zijn momenteel in beta en kunnen wijzigen:
+    - Speaker diarization (sprekerherkenning)
+    - Speaker count (aantal sprekers)
+    - Speaker names (namen van sprekers)
     
     ## Prijzen
     - Transcriptie: €5
@@ -64,7 +70,10 @@ paths:
   /create-order:
     post:
       summary: Maak een nieuwe order aan
-      description: Creëer een nieuwe order voor het verwerken van een audio bestand
+      description: |
+        Creëer een nieuwe order voor het verwerken van een audio bestand.
+        
+        Let op: Sommige features zijn experimenteel en kunnen wijzigen.
       operationId: createOrder
       tags:
         - Orders
@@ -79,10 +88,12 @@ paths:
               required:
                 - fileName
                 - email
-                - modelType
                 - reportType
                 - context
+                - meeting_date
+                - smart_detection
               properties:
+                # Verplichte velden
                 fileName:
                   type: string
                   description: Naam van het audio bestand
@@ -92,10 +103,6 @@ paths:
                   format: email
                   description: Email voor notificaties
                   example: "contact@bedrijf.nl"
-                modelType:
-                  type: string
-                  enum: [standard]
-                  description: Type transcriptie model
                 reportType:
                   type: string
                   enum: [transcriptie, korte_notulen, middel_notulen, lange_notulen]
@@ -104,24 +111,44 @@ paths:
                   type: string
                   description: Naam/context van de vergadering
                   example: "Bestuursvergadering Q1"
+                meeting_date:
+                  type: string
+                  format: date
+                  description: Datum van de vergadering (YYYY-MM-DD)
+                  example: "2025-02-23"
+                smart_detection:
+                  type: boolean
+                  description: Automatische agendapunt detectie
+                  example: true
+
+                # Optionele velden
                 webhook_url:
                   type: string
                   format: uri
                   description: URL waar webhook notificaties naartoe gestuurd worden
                   example: "https://jouw-domein.nl/webhook"
-                smart_detection:
-                  type: boolean
-                  description: Automatische agendapunt detectie
-                  default: false
+                unstructured_agenda:
+                  type: string
+                  description: Ongestructureerde agenda tekst
+                  example: "1. Opening\n2. Notulen\n3. Rondvraag"
+
+                # Experimentele features
                 speaker_diarization:
                   type: boolean
-                  description: Sprekerherkenning gebruiken
+                  description: "[EXPERIMENTEEL] Sprekerherkenning gebruiken"
                   default: false
                 speaker_count:
                   type: integer
-                  description: Verwacht aantal sprekers
+                  description: "[EXPERIMENTEEL] Verwacht aantal sprekers"
                   minimum: 1
                   maximum: 10
+                speaker_names:
+                  type: array
+                  description: "[EXPERIMENTEEL] Namen van de sprekers"
+                  items:
+                    type: string
+                  example: ["Jan", "Piet", "Marie"]
+
       responses:
         '202':
           description: Order accepted for processing
